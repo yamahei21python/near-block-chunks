@@ -40,4 +40,4 @@ jobs:
               --notes "near raw block data. JSON gz + manifest (first/last/block_count/tx_count/bytes/sha256). No private keys."
           python3 scripts/fetch_chunk.py --first "$f" --count "$c" --out "near_${f}_${l}.json"
           gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber \
-            "near_${f}_${l}.json.gz" "near_${f}_${l}.manifest.json"
+            "near_${f}_${l}.json.gz" "near_${f}_${l}.json.manifest.json"
