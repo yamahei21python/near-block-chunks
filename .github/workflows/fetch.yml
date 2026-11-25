@@ -1,0 +1,43 @@
+name: fetch-blocks
+
+on:
+  workflow_dispatch:
+    inputs:
+      first:
+        description: "First block / level / round"
+        required: true
+        type: number
+      count:
+        description: "Number of blocks (1-100)"
+        required: true
+        type: number
+        default: 1
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch blocks and publish release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FIRST: ${{ inputs.first }}
+          COUNT: ${{ inputs.count }}
+        run: |
+          set -euo pipefail
+          python3 -c 'import os,sys; f=int(float(os.environ["FIRST"])); c=int(float(os.environ["COUNT"])); sys.exit(0 if f >= 0 and 1 <= c <= 100 else 1)'
+          f=$(python3 -c 'import os; print(int(float(os.environ["FIRST"])))')
+          c=$(python3 -c 'import os; print(int(float(os.environ["COUNT"])))')
+          l=$((f + c - 1))
+          TAG="data-${f}-${l}"
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" \
+              --title "NEAR blocks ${f}-${l}" \
+              --notes "near raw block data. JSON gz + manifest (first/last/block_count/tx_count/bytes/sha256). No private keys."
+          python3 scripts/fetch_chunk.py --first "$f" --count "$c" --out "near_${f}_${l}.json"
+          gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber \
+            "near_${f}_${l}.json.gz" "near_${f}_${l}.manifest.json"
